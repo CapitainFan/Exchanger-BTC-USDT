@@ -3,10 +3,17 @@ import ccxt.async_support as ccxt
 from aiogram import types, Dispatcher
 from bot import dp, bot, TEXT
 from keyboard import kb_client, button3, button4
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.dispatcher import FSMContext
 
 
 exchange = ccxt.wavesexchange()
 registerd = False
+
+
+class Registration(StatesGroup):
+    apikey = State()
+    secret = State()
 
 
 async def start_command(message: types.Message):
@@ -15,10 +22,28 @@ async def start_command(message: types.Message):
 
 async def register(message: types.Message):
     global registerd
-    global exchange
     if registerd:
         await bot.send_message(message.from_user.id, 'Вы уже вошли в аккаунт')
         return
+
+    await message.answer('Введите Публичный ключ :')
+    await Registration.apikey.set()
+
+
+async def get_apykey(message: types.Message, state: FSMContext):
+    answer = message.text
+    await state.update_data(answer1=answer)
+    await message.answer('Введите Приватный ключ :')
+    await Registration.next()
+
+
+async def get_secret(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    SECRET = message.text
+    APIKEY = data.get('answer1')
+
+    global registerd
+    global exchange
 
     try:
         exchange = ccxt.wavesexchange({
@@ -26,6 +51,7 @@ async def register(message: types.Message):
             'apiKey': APIKEY,
             'secret': SECRET,
         })
+        await exchange.fetch_my_trades()
         yes = emoji.emojize(':check_mark_button:')
         result = f'Вход в аккаунт криптобирже waves.exchange удался {yes}'
         kb_client.add(button3).add(button4)
@@ -35,6 +61,7 @@ async def register(message: types.Message):
         result = f'Вход в аккаунт криптобирже waves.exchange не удался {no} :\nДанные не подходят или аккаунта не существует\nили произошла ошибка в работе бота'
 
     await bot.send_message(message.from_user.id, result, reply_markup=kb_client)
+    await exchange.close()
 
 
 async def get_rate(message: types.Message):
@@ -121,3 +148,5 @@ def register_handlers_client(dp : Dispatcher):
     dp.register_message_handler(buy, commands=['Купить_пару_BTC/USDT'])
     dp.register_message_handler(sell, commands=['Продать_пару_BTC/USDT'])
     dp.register_message_handler(register, commands=['Войти_в_аккаунт'])
+    dp.register_message_handler(get_apykey, state=Registration.apikey)
+    dp.register_message_handler(get_secret, state=Registration.secret)
