@@ -61,6 +61,7 @@ async def get_secret(message: types.Message, state: FSMContext):
         result = f'Вход в аккаунт криптобирже waves.exchange не удался {no} :\nДанные не подходят или аккаунта не существует\nили произошла ошибка в работе бота'
 
     await bot.send_message(message.from_user.id, result, reply_markup=kb_client)
+    await state.finish()
     await exchange.close()
 
 
@@ -90,7 +91,7 @@ async def buy(message: types.Message):
     low = int(markets['info']['24h_low'])
 
     symbol = 'BTC-WXG/USDT-WXG'
-    type = 'limit'
+    type = 'market'
     side = 'buy'
     amount = 1
     price = int(low + ((high - low)/2))
@@ -99,7 +100,6 @@ async def buy(message: types.Message):
     }
     try:
         request = await exchange.create_order(symbol, type, side, amount, price, params)
-        price(request)
         yes = emoji.emojize(':check_mark_button:')
         result = f'Ваш ордер был успешно отправлен {yes}'
     except:
@@ -121,7 +121,7 @@ async def sell(message: types.Message):
     low = int(markets['info']['24h_low'])
 
     symbol = 'BTC-WXG/USDT-WXG'
-    type = 'limit'
+    type = 'market'
     side = 'sell'
     amount = 1
     price = int(low + ((high - low)/2))
@@ -131,7 +131,6 @@ async def sell(message: types.Message):
 
     try:
         request = await exchange.create_order(symbol, type, side, amount, price, params)
-        price(request)
         yes = emoji.emojize(':check_mark_button:')
         result = f'Ваш ордер был успешно отправлен {yes}'
     except:
