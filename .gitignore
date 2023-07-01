@@ -153,3 +153,4 @@ media/
 .env
 __pycache__
 test.py
+secret.py

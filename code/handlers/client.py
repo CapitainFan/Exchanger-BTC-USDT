@@ -95,7 +95,7 @@ async def buy(message: types.Message):
     side = 'buy'
     amount = 1
     price = int(low + ((high - low)/2))
-    params={
+    params = {
         'triggerPrice': price,
     }
     try:
@@ -125,7 +125,7 @@ async def sell(message: types.Message):
     side = 'sell'
     amount = 1
     price = int(low + ((high - low)/2))
-    params={
+    params = {
         'triggerPrice': price,
     }
 
