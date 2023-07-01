@@ -125,7 +125,7 @@ async def get_price(message: types.Message, state: FSMContext):
             request = await exchange.create_order(symbol, type, side, amount, price)
             yes = emoji.emojize(':check_mark_button:')
             ar = emoji.emojize(':right_arrow:')
-            result = f'Ваш ордер был успешно отправлен {yes}\nМожете посмотреть в разделе :\nКошелёк {ar} Внутренние транзакции '
+            result = f'Ваш ордер был успешно отправлен {yes}\nМожете посмотреть в своём аккаунте waves.exchange в разделе\nКошелёк {ar} Внутренние транзакции '
         except:
             no = emoji.emojize(':cross_mark:')
             result = f'Покупка валютной пары BTC-WXG/USDT-WXG не удалась {no} :\nНедостаточно средств на балансе\nили произошла ошибка в работе бота'
@@ -173,7 +173,7 @@ async def get_price2(message: types.Message, state: FSMContext):
             request = await exchange.create_order(symbol, type, side, amount, price)
             yes = emoji.emojize(':check_mark_button:')
             ar = emoji.emojize(':right_arrow:')
-            result = f'Ваш ордер был успешно отправлен {yes}\nМожете посмотреть в разделе :\nКошелёк {ar} Внутренние транзакции '
+            result = f'Ваш ордер был успешно отправлен {yes}\nМожете посмотреть в своём аккаунте waves.exchange в разделе\nКошелёк {ar} Внутренние транзакции '
         except:
             no = emoji.emojize(':cross_mark:')
             result = f'Продажа валютной пары BTC-WXG/USDT-WXG не удалась {no} :\nНедостаточно средств на балансе\nили произошла ошибка в работе бота'
