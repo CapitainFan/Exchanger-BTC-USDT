@@ -6,8 +6,10 @@
 ### Технологии
 python
 aiogram
-ccxt 
+ccxt
 python-dotenv 
+Flask
+
 ### Запуск проекта
 - Установите виртуальное окружение
 - Активируйте его
@@ -19,9 +21,9 @@ python -m venv venv
 source venv/Scripts/activate
 ```
 
-создайте файл .env и запешите в него:
+создайте файл code/secret.py и запешите в него:
 ```
-TOKEN=токен_вашего_тг_бота
+TOKEN = 'токен_вашего_тг_бота' (с ковычками)
 ```
 ```
 pip install -r requirements.txt
@@ -30,3 +32,4 @@ python code/start.py
 ```
 ### Автор
 Богдан Сокольников
+для "ООО БаксарНЕТ"
