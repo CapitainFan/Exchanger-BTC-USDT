@@ -76,6 +76,7 @@ async def get_secret(message: types.Message, state: FSMContext):
 
 
 async def get_rate(message: types.Message):
+    global exchange
     orderbook = await exchange.fetch_order_book('BTC-WXG/USDT-WXG')
     bid = orderbook['bids'][0][0] if len(orderbook['bids']) > 0 else None
     ask = orderbook['asks'][0][0] if len(orderbook['asks']) > 0 else None
@@ -95,7 +96,7 @@ async def buy(message: types.Message):
     if not registerd:
         await bot.send_message(message.from_user.id, 'Вы не вошли в аккаунт')
         return
-    
+
     await message.answer('Введите сколько вы хотите купить :')
     await Buy.amount.set()
 
@@ -112,6 +113,8 @@ async def get_amount(message: types.Message, state: FSMContext):
 
 
 async def get_price(message: types.Message, state: FSMContext):
+    global exchange
+
     try:
         data = await state.get_data()
         price = float(message.text)
@@ -136,6 +139,7 @@ async def get_price(message: types.Message, state: FSMContext):
     except:
         await bot.send_message(message.from_user.id, 'Вы ввели не число!\nНачните с начала!', reply_markup=kb_client)
         await state.finish()
+        await exchange.close()
 
 
 async def sell(message: types.Message):
@@ -160,6 +164,7 @@ async def get_amount2(message: types.Message, state: FSMContext):
 
 
 async def get_price2(message: types.Message, state: FSMContext):
+    global exchange
     try:
         data = await state.get_data()
         price = float(message.text)
@@ -184,6 +189,7 @@ async def get_price2(message: types.Message, state: FSMContext):
     except:
         await bot.send_message(message.from_user.id, 'Вы ввели не число!\nНачните с начала!', reply_markup=kb_client)
         await state.finish()
+        await exchange.close()
 
 
 def register_handlers_client(dp : Dispatcher):

@@ -28,7 +28,7 @@ TOKEN = 'токен_вашего_тг_бота' (с ковычками)
 ```
 pip install -r requirements.txt
 
-python code/start.py
+python code/main.py
 ```
 ### Автор
 Богдан Сокольников
