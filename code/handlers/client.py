@@ -1,19 +1,70 @@
 import emoji
+import asyncio
+import config
+import requests
 import ccxt.async_support as ccxt
 from aiogram import types, Dispatcher
 from bot import dp, bot, TEXT
-from keyboard import kb_client, button3, button4
+from keyboard import kb_client
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types.message import ContentType
 
 
 exchange = ccxt.wavesexchange()
-registerd = False
+
+price = None
+title = None
+deskription = None
 
 
-class Registration(StatesGroup):
-    apikey = State()
-    secret = State()
+@dp.message_handler(commands=['Подтвердить_платёж'])
+async def payment(message: types.Message):
+    global price
+    if price is None:
+        await message.answer('Вы не выбрали опирацию')
+        print(price)
+        return
+
+    await bot.send_invoice(message.chat.id,
+                           title=title,
+                           description=deskription,
+                           provider_token=config.PAYMENTS_TOKEN,
+                           currency="usd",
+                           photo_url="https://tradesanta.com/blog/wp-content/uploads/2022/08/usdt-btc-1.png",
+                           photo_width=416,
+                           photo_height=234,
+                           photo_size=416,
+                           is_flexible=False,
+                           prices=[price],
+                           start_parameter="buyOrderBTCUSDT",
+                           payload="invoice-payload")
+
+
+@dp.pre_checkout_query_handler(lambda query: True)
+async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
+
+
+@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
+async def successful_payment(message: types.Message):
+    global price
+    global title
+    global deskription
+    print("SUCCESSFUL PAYMENT:")
+    print(f'{message.from_user.first_name} = {message.from_user.url}')
+    payment_info = message.successful_payment.to_python()
+    for k, v in payment_info.items():
+        print(f"{k} = {v}")
+
+    price = None
+    title = None
+    deskription = None
+
+    await bot.send_message(message.chat.id,
+                           f"Платёж на сумму {message.successful_payment.total_amount // 100} {message.successful_payment.currency} прошел успешно!!!",
+                           reply_markup=kb_client)
 
 
 class Buy(StatesGroup):
@@ -28,51 +79,6 @@ class Sell(StatesGroup):
 
 async def start_command(message: types.Message):
     await bot.send_message(message.from_user.id, TEXT, reply_markup=kb_client)
-
-
-async def register(message: types.Message):
-    global registerd
-    if registerd:
-        await bot.send_message(message.from_user.id, 'Вы уже вошли в аккаунт')
-        return
-
-    await message.answer('Введите Публичный ключ :')
-    await Registration.apikey.set()
-
-
-async def get_apykey(message: types.Message, state: FSMContext):
-    answer = message.text
-    await state.update_data(answer1=answer)
-    await message.answer('Введите Приватный ключ :')
-    await Registration.next()
-
-
-async def get_secret(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    SECRET = message.text
-    APIKEY = data.get('answer1')
-
-    global registerd
-    global exchange
-
-    try:
-        exchange = ccxt.wavesexchange({
-            'enableRateLimit': True,
-            'apiKey': APIKEY,
-            'secret': SECRET,
-        })
-        await exchange.fetch_my_trades()
-        yes = emoji.emojize(':check_mark_button:')
-        result = f'Вход в аккаунт криптобирже waves.exchange удался {yes}'
-        kb_client.add(button3).add(button4)
-        registerd = True
-    except:
-        no = emoji.emojize(':cross_mark:')
-        result = f'Вход в аккаунт криптобирже waves.exchange не удался {no} :\nДанные не подходят или аккаунта не существует\nили произошла ошибка в работе бота'
-
-    await bot.send_message(message.from_user.id, result, reply_markup=kb_client)
-    await state.finish()
-    await exchange.close()
 
 
 async def get_rate(message: types.Message):
@@ -92,12 +98,7 @@ async def get_rate(message: types.Message):
 
 
 async def buy(message: types.Message):
-    global registerd
-    if not registerd:
-        await bot.send_message(message.from_user.id, 'Вы не вошли в аккаунт')
-        return
-
-    await message.answer('Введите сколько вы хотите купить :')
+    await message.answer('Введите сколько вы хотите купить BTC:')
     await Buy.amount.set()
 
 
@@ -105,7 +106,7 @@ async def get_amount(message: types.Message, state: FSMContext):
     try:
         answer = float(message.text)
         await state.update_data(amount=answer)
-        await message.answer('Введите по какой цене вы хотите купить :')
+        await message.answer('Введите по какой цене вы хотите купить BTC:')
         await Buy.next()
     except:
         await bot.send_message(message.from_user.id, 'Вы ввели не число!\nНачните с начала!', reply_markup=kb_client)
@@ -114,24 +115,27 @@ async def get_amount(message: types.Message, state: FSMContext):
 
 async def get_price(message: types.Message, state: FSMContext):
     global exchange
+    global price
+    global title
+    global deskription
 
     try:
         data = await state.get_data()
-        price = float(message.text)
-        amount = data.get('amount')
 
+        priceforone = float(message.text)
+        amount = data.get('amount')
         symbol = 'BTC-WXG/USDT-WXG'
         type = 'limit'
         side = 'buy'
 
-        try:
-            request = await exchange.create_order(symbol, type, side, amount, price)
-            yes = emoji.emojize(':check_mark_button:')
-            ar = emoji.emojize(':right_arrow:')
-            result = f'Ваш ордер был успешно отправлен {yes}\nМожете посмотреть в своём аккаунте waves.exchange в разделе\nКошелёк {ar} Внутренние транзакции '
-        except:
-            no = emoji.emojize(':cross_mark:')
-            result = f'Покупка валютной пары BTC-WXG/USDT-WXG не удалась {no} :\nНедостаточно средств на балансе\nили произошла ошибка в работе бота'
+        price = amount * priceforone
+        title = 'Кокупка BTC-WXG/USDT-WXG'
+        deskription = 'Обмен USDT-WXG на BTC-WXG на криптобирже waves.exchange'
+
+        yes = emoji.emojize(':check_mark_button:')
+        result = f'{yes}Готово!\nОплатите что бы разместить ордер на покупку криптовалютной пары BTC-WXG/USDT-WXG\nПриблизительная стоимость $ {round(price, 2)}'
+        price = int(price*100)
+        price = types.LabeledPrice(label="Покупка BTC-WXG/USDT-WXG", amount=price)
 
         await bot.send_message(message.from_user.id, result, reply_markup=kb_client)
         await state.finish()
@@ -143,12 +147,7 @@ async def get_price(message: types.Message, state: FSMContext):
 
 
 async def sell(message: types.Message):
-    global registerd
-    if not registerd:
-        await bot.send_message(message.from_user.id, 'Вы не вошли в аккаунт')
-        return
-    
-    await message.answer('Введите сколько вы хотите продать :')
+    await message.answer('Введите сколько вы хотите купить USDT:')
     await Sell.amount.set()
 
 
@@ -156,7 +155,7 @@ async def get_amount2(message: types.Message, state: FSMContext):
     try:
         answer = float(message.text)
         await state.update_data(amount2=answer)
-        await message.answer('Введите по какой цене вы хотите продать :')
+        await message.answer('Введите по какой цене вы хотите купить USDT:')
         await Sell.next()
     except:
         await bot.send_message(message.from_user.id, 'Вы ввели не число!\nНачните с начала!', reply_markup=kb_client)
@@ -165,23 +164,31 @@ async def get_amount2(message: types.Message, state: FSMContext):
 
 async def get_price2(message: types.Message, state: FSMContext):
     global exchange
+    global price
+    global title
+    global deskription
+
     try:
         data = await state.get_data()
-        price = float(message.text)
+        priceforone = float(message.text)
         amount = data.get('amount2')
 
         symbol = 'BTC-WXG/USDT-WXG'
         type = 'limit'
         side = 'sell'
 
-        try:
-            request = await exchange.create_order(symbol, type, side, amount, price)
-            yes = emoji.emojize(':check_mark_button:')
-            ar = emoji.emojize(':right_arrow:')
-            result = f'Ваш ордер был успешно отправлен {yes}\nМожете посмотреть в своём аккаунте waves.exchange в разделе\nКошелёк {ar} Внутренние транзакции '
-        except:
-            no = emoji.emojize(':cross_mark:')
-            result = f'Продажа валютной пары BTC-WXG/USDT-WXG не удалась {no} :\nНедостаточно средств на балансе\nили произошла ошибка в работе бота'
+        exchange2 = ccxt.kraken()
+        r = await exchange2.fetch_ticker('BTC/USD')
+        await exchange2.close()
+
+        price = r['high'] * amount * (1/priceforone)
+        title = 'Продажа BTC-WXG/USDT-WXG'
+        deskription = 'Обмен BTC-WXG на USDT-WXG на криптобирже waves.exchange'
+
+        yes = emoji.emojize(':check_mark_button:')
+        result = f'{yes}Готово!\nОплатите что бы разместить ордер на продажу криптовалютной пары BTC-WXG/USDT-WXG\nПриблизительная стоимость $ {round(price, 2)}'
+        price = int(price*100)
+        price = types.LabeledPrice(label="Продажа BTC-WXG/USDT-WXG", amount=price)
 
         await bot.send_message(message.from_user.id, result, reply_markup=kb_client)
         await state.finish()
@@ -195,11 +202,8 @@ async def get_price2(message: types.Message, state: FSMContext):
 def register_handlers_client(dp : Dispatcher):
     dp.register_message_handler(start_command, commands=['start'])
     dp.register_message_handler(get_rate, commands=['Получить_текущий_курс_BTC/USDT'])
-    dp.register_message_handler(buy, commands=['Купить_пару_BTC/USDT'])
-    dp.register_message_handler(sell, commands=['Продать_пару_BTC/USDT'])
-    dp.register_message_handler(register, commands=['Войти_в_аккаунт'])
-    dp.register_message_handler(get_apykey, state=Registration.apikey)
-    dp.register_message_handler(get_secret, state=Registration.secret)
+    dp.register_message_handler(buy, commands=['Вырбать_цену_для_покупки_пары_BTC/USDT'])
+    dp.register_message_handler(sell, commands=['Выбрать_цену_для_продажи_пары_BTC/USDT'])
     dp.register_message_handler(get_amount, state=Buy.amount)
     dp.register_message_handler(get_price, state=Buy.price)
     dp.register_message_handler(get_amount2, state=Sell.amount)
