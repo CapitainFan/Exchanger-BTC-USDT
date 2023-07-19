@@ -3,13 +3,15 @@ import asyncio
 import config
 import requests
 import ccxt.async_support as ccxt
+from random import randint
 from aiogram import types, Dispatcher
 from bot import dp, bot, TEXT
 from keyboard import kb_client
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher import FSMContext
-from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types.message import ContentType
+from aiogram.filters import Command, Text
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 exchange = ccxt.wavesexchange()
